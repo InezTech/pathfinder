@@ -36,10 +36,10 @@ const Manifesto = () => {
                         className="rolex-image-wrapper"
                     >
                         <motion.img
-                            src="/watch_clean_1.png"
+                            src="/watch_generated_gemini.png?v=2"
                             alt="Watch Masterpiece"
                             className="rolex-content-img"
-                            animate={{ y: [-10, 10, -10], rotateZ: [-0.5, 0.5, -0.5] }}
+                            animate={{ y: [-5, 5, -5], rotateZ: [-0.2, 0.2, -0.2] }}
                             transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
                         />
                     </motion.div>

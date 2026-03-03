@@ -8,7 +8,7 @@ const CinemaScroll = () => {
     const canvasRef = useRef(null);
     const containerRef = useRef(null);
     const [images, setImages] = useState([]);
-    const frameCount = 240;
+    const frameCount = 417;
 
     useEffect(() => {
         const loadedImages = [];
@@ -47,8 +47,8 @@ const CinemaScroll = () => {
         const renderFrame = (index) => {
             if (images[index]) {
                 const img = images[index];
-                // Increase scale to cleanly crop out the 'PATHFINDER' text embedded at the bottom of the raw image frames
-                const scale = Math.max(canvas.width / img.width, canvas.height / img.height) * 1.15;
+                // Calculate scale to ensure video covers the full screen (like object-fit: cover)
+                const scale = Math.max(canvas.width / img.width, canvas.height / img.height);
                 const x = (canvas.width / 2) - (img.width / 2) * scale;
                 const y = (canvas.height / 2) - (img.height / 2) * scale;
                 context.clearRect(0, 0, canvas.width, canvas.height);

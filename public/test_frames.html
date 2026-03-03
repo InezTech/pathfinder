@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frame Preview</title>
+    <style>
+        body {
+            background: #000;
+            color: #fff;
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        .frame {
+            margin: 10px;
+            text-align: center;
+        }
+
+        img {
+            width: 300px;
+            height: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <script>
+        for (let i = 1; i <= 452; i += 10) {
+            const paddedFrame = String(i).padStart(4, '0');
+            document.write(`
+                <div class="frame">
+                    <p>Frame ${i}</p>
+                    <img src="/frames/frame_${paddedFrame}.jpg" alt="Frame ${i}">
+                </div>
+            `);
+        }
+    </script>
+</body>
+
+</html>
