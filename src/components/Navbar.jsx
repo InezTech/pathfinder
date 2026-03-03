@@ -75,7 +75,7 @@ const Navbar = () => {
                                     <h4 className="menu-info-title">Atelier Location</h4>
                                     <div className="menu-map-wrapper">
                                         <iframe
-                                            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2482.6865611488585!2d-0.14371588397455823!3d51.51895697963749!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x48761ad554c335c1%3A0xda2164b934c67cfa!2sMayfair%2C%20London%2C%20UK!5e0!3m2!1sen!2sus!4v1684420000000!5m2!1sen!2sus"
+                                            src="https://maps.google.com/maps?q=Rue%20du%20Rh%C3%B4ne%2012,%201204%20Geneva,%20Switzerland&t=&z=15&ie=UTF8&iwloc=&output=embed"
                                             width="100%"
                                             height="200"
                                             style={{ border: 0, filter: 'grayscale(1) invert(0.9) opacity(0.8)' }}
@@ -84,7 +84,7 @@ const Navbar = () => {
                                             referrerPolicy="no-referrer-when-downgrade"
                                         ></iframe>
                                     </div>
-                                    <p className="menu-address">14 Savile Row, Mayfair, London W1S 3JN</p>
+                                    <p className="menu-address">Rue du Rhône 12, 1204 Geneva, Switzerland</p>
                                 </div>
 
                                 <div className="menu-info-section">
