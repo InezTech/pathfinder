@@ -36,26 +36,33 @@ const CinemaScroll = () => {
                 window.dispatchEvent(new Event('resize'));
             }
 
-            // Defer loading the remaining frames slightly so other page assets take priority
+            // Defer loading the remaining frames slightly more to give the 3D canvas and fonts time to breathe
             setTimeout(async () => {
-                // MASSIVE UX BOOST: Load a "skeleton" animation first.
-                // We load every 10th frame. This ensures if the customer scrolls really fast,
-                // the canvas always has a frame very close to the current index ready to drop in, 
-                // creating an instantly smooth scrub without waiting for all 400 frames.
-                const skeletonBatch = [];
-                for (let i = 10; i < frameCount; i += 10) {
-                    skeletonBatch.push(loadFrame(i));
-                }
-                await Promise.all(skeletonBatch);
+                const isMobile = window.innerWidth < 768;
 
-                // Now smoothly load all the remaining gap frames in the background
-                const concurrency = 6;
+                // MASSIVE UX BOOST: Load a "skeleton" animation first.
+                // Mobile networks choke on 40+ parallel requests. We throttle the skeleton load into batches of 4.
+                // On mobile, we only load every 20th frame for the skeleton to get it ready twice as fast.
+                const skeletonStep = isMobile ? 20 : 10;
+                const skeletonConcurrency = 4;
+
+                for (let i = skeletonStep; i < frameCount; i += skeletonConcurrency * skeletonStep) {
+                    const batch = [];
+                    for (let j = 0; j < skeletonConcurrency && i + (j * skeletonStep) < frameCount; j++) {
+                        batch.push(loadFrame(i + (j * skeletonStep)));
+                    }
+                    await Promise.all(batch);
+                }
+
+                // Now smoothly load all the remaining gap frames in the background.
+                // Mobile uses a very slow trickle (2 parallel) so it never interrupts scrolling.
+                const concurrency = isMobile ? 2 : 6;
                 for (let i = 1; i < frameCount; i += concurrency) {
                     const batch = [];
                     for (let j = 0; j < concurrency && i + j < frameCount; j++) {
                         const targetFrame = i + j;
                         // Skip if we already loaded it in the skeleton pass
-                        if (targetFrame % 10 !== 0 && targetFrame !== 0) {
+                        if (targetFrame % skeletonStep !== 0 && targetFrame !== 0) {
                             batch.push(loadFrame(targetFrame));
                         }
                     }
@@ -63,7 +70,7 @@ const CinemaScroll = () => {
                         await Promise.all(batch);
                     }
                 }
-            }, 300);
+            }, 800);
         };
 
         if (!imagesRef.current[0]) {
@@ -79,11 +86,8 @@ const CinemaScroll = () => {
 
         // CRITICAL PERFORMANCE FIX: 
         // GSAP fires onUpdate hundreds of times per second. 
-        // If we clearRect and drawImage the exact same frame repeatedly, it destroys laptop/mobile CPU.
         // We cache the last drawn elements and ONLY redraw when the actual image mathematically changes.
         let lastDrawnImg = null;
-        let lastCanvasWidth = 0;
-        let lastCanvasHeight = 0;
 
         const renderFrame = (index) => {
             const rawIndex = Math.round(index);
@@ -100,36 +104,28 @@ const CinemaScroll = () => {
                 }
             }
 
-            // Only execute the heavy canvas render pipeline if the image or screen size actually changed!
-            if (img && img.complete && img.naturalWidth > 0 &&
-                (img !== lastDrawnImg || canvas.width !== lastCanvasWidth || canvas.height !== lastCanvasHeight)) {
+            // Only execute the canvas render pipeline if the image actually changed!
+            if (img && img.complete && img.naturalWidth > 0 && img !== lastDrawnImg) {
 
-                const scale = Math.max(canvas.width / img.naturalWidth, canvas.height / img.naturalHeight);
-                const drawWidth = img.naturalWidth * scale;
-                const drawHeight = img.naturalHeight * scale;
-                const x = (canvas.width / 2) - (drawWidth / 2);
-                const y = (canvas.height / 2) - (drawHeight / 2);
+                // EXTREME GPU OFFLOADING: 
+                // We no longer calculate screen `scale`, `x/y` centering, or `Math.max` dynamically in JavaScript. 
+                // We lock the canvas internal coordinate system to the raw 1080p source image, and let 
+                // the hardware-accelerated CSS `object-fit: cover` magically stretch it to fluidly fit ANY device screen perfectly without CPU lag.
+                if (canvas.width !== img.naturalWidth || canvas.height !== img.naturalHeight) {
+                    canvas.width = img.naturalWidth;
+                    canvas.height = img.naturalHeight;
+                }
 
-                // Use hardware acceleration friendly methods
-                context.imageSmoothingEnabled = true;
-                context.imageSmoothingQuality = 'high';
+                // Since the canvas intrinsically matches the image, we just drop it at 0,0
                 context.clearRect(0, 0, canvas.width, canvas.height);
-                context.drawImage(img, x, y, drawWidth, drawHeight);
+                context.drawImage(img, 0, 0);
 
                 lastDrawnImg = img;
-                lastCanvasWidth = canvas.width;
-                lastCanvasHeight = canvas.height;
             }
         };
 
-        const updateSize = () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            renderFrame(scrollObj.frame);
-        };
-
-        window.addEventListener('resize', updateSize);
-        setTimeout(updateSize, 100);
+        // Initial draw setup (we no longer need to bind this to resize events, CSS handles that magically!)
+        setTimeout(() => renderFrame(scrollObj.frame), 100);
 
         const tl = gsap.timeline({
             scrollTrigger: {
@@ -158,7 +154,6 @@ const CinemaScroll = () => {
         }, 0.85);
 
         return () => {
-            window.removeEventListener('resize', updateSize);
             ScrollTrigger.getAll().forEach(t => t.kill());
         };
     }, []);
