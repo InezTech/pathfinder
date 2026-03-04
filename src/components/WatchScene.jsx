@@ -1,4 +1,5 @@
 import React, { Suspense, useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { Canvas } from '@react-three/fiber';
 import { useGLTF, OrbitControls, Stage } from '@react-three/drei';
 
@@ -89,7 +90,8 @@ const WatchScene = () => {
                 <OrbitControls
                     makeDefault
                     autoRotate
-                    autoRotateSpeed={0.5}
+                    // Boosted to 1.5 so it spins clearly on page load, screaming "I am 3D!"
+                    autoRotateSpeed={1.5}
                     rotateSpeed={0.25}
                     enableDamping={true}
                     dampingFactor={0.05}
@@ -99,6 +101,37 @@ const WatchScene = () => {
                     maxPolarAngle={Math.PI / 2}
                 />
             </Canvas>
+
+            {/* Subtle luxury UI note indicating interactivity */}
+            <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 0.5, y: 0 }}
+                transition={{ delay: 1, duration: 1.5 }}
+                style={{
+                    position: 'absolute',
+                    bottom: '10%',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    pointerEvents: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    fontFamily: '"Inter", sans-serif',
+                    fontSize: '0.65rem',
+                    letterSpacing: '0.2em',
+                    textTransform: 'uppercase',
+                    color: '#1a1a1a',
+                }}
+            >
+                <motion.div
+                    animate={{ x: [-8, 8, -8] }}
+                    transition={{ repeat: Infinity, duration: 3, ease: "easeInOut" }}
+                    style={{ fontSize: '1.2rem', fontWeight: 300 }}
+                >
+                    ⟷
+                </motion.div>
+                Drag to explore
+            </motion.div>
         </div>
     );
 };
