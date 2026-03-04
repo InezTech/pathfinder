@@ -455,7 +455,9 @@ section {
   height: auto;
   max-width: none;
   display: block;
-  margin-bottom: 0;
+  margin-bottom: 0px;
+  -webkit-mask-image: linear-gradient(to bottom, black 40%, transparent 80%);
+  mask-image: linear-gradient(to bottom, black 40%, transparent 80%);
 }
 
 .rolex-footer {

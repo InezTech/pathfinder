@@ -7,47 +7,76 @@ gsap.registerPlugin(ScrollTrigger);
 const CinemaScroll = () => {
     const canvasRef = useRef(null);
     const containerRef = useRef(null);
-    const [images, setImages] = useState([]);
+    const imagesRef = useRef([]);
     const frameCount = 417;
 
     useEffect(() => {
-        const loadedImages = [];
-        let loadedCount = 0;
+        const loadedImages = new Array(frameCount).fill(null);
+        imagesRef.current = loadedImages;
 
-        const preloadImages = () => {
-            for (let i = 1; i <= frameCount; i++) {
+        const loadFrame = (index) => {
+            return new Promise((resolve) => {
                 const img = new Image();
-                const frameIndex = i.toString().padStart(4, '0');
+                img.fetchPriority = index === 0 ? "high" : "low";
+                const frameIndex = (index + 1).toString().padStart(4, '0');
                 img.src = `/frames/frame_${frameIndex}.jpg`;
                 img.onload = () => {
-                    loadedCount++;
-                    if (loadedCount === frameCount) {
-                        setImages(loadedImages);
-                    }
+                    loadedImages[index] = img;
+                    resolve(img);
                 };
-                loadedImages.push(img);
-            }
+                img.onerror = () => resolve(null);
+            });
         };
 
-        preloadImages();
+        const init = async () => {
+            // Load frame 0 immediately
+            await loadFrame(0);
+
+            // Re-render once so canvas paints the first frame
+            const canvas = canvasRef.current;
+            if (canvas) {
+                const e = new Event('resize');
+                window.dispatchEvent(e);
+            }
+
+            // Defer loading the remaining frames slightly so other page assets take priority
+            setTimeout(async () => {
+                // Throttle to 5 concurrent connections to prevent stalling Safari/Edge
+                const concurrency = 5;
+                for (let i = 1; i < frameCount; i += concurrency) {
+                    const batch = [];
+                    for (let j = 0; j < concurrency && i + j < frameCount; j++) {
+                        batch.push(loadFrame(i + j));
+                    }
+                    await Promise.all(batch);
+                }
+            }, 500);
+        };
+
+        if (!imagesRef.current[0]) {
+            init();
+        }
     }, []);
 
     useEffect(() => {
-        if (images.length !== frameCount) return;
-
         const canvas = canvasRef.current;
+        if (!canvas) return;
         const context = canvas.getContext('2d');
-
-        const updateSize = () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            renderFrame(0);
-        };
+        const scrollObj = { frame: 0 };
 
         const renderFrame = (index) => {
-            if (images[index]) {
-                const img = images[index];
-                // Calculate scale to ensure video covers the full screen (like object-fit: cover)
+            let img = imagesRef.current[index];
+            if (!img) {
+                // Fallback to nearest loaded previous frame
+                for (let i = index - 1; i >= 0; i--) {
+                    if (imagesRef.current[i]) {
+                        img = imagesRef.current[i];
+                        break;
+                    }
+                }
+            }
+
+            if (img) {
                 const scale = Math.max(canvas.width / img.width, canvas.height / img.height);
                 const x = (canvas.width / 2) - (img.width / 2) * scale;
                 const y = (canvas.height / 2) - (img.height / 2) * scale;
@@ -56,10 +85,16 @@ const CinemaScroll = () => {
             }
         };
 
-        window.addEventListener('resize', updateSize);
-        updateSize();
+        const updateSize = () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            renderFrame(Math.round(scrollObj.frame));
+        };
 
-        const scrollObj = { frame: 0 };
+        window.addEventListener('resize', updateSize);
+        // Initial draw setup
+        setTimeout(updateSize, 100);
+
         const tl = gsap.timeline({
             scrollTrigger: {
                 trigger: containerRef.current,
@@ -78,7 +113,6 @@ const CinemaScroll = () => {
             onUpdate: () => renderFrame(Math.round(scrollObj.frame)),
         }, 0);
 
-        // Fade overlay to black over the canvas in the last 15% of the timeline
         tl.to('.cinema-overlay', {
             opacity: 1,
             duration: 0.15,
@@ -89,7 +123,7 @@ const CinemaScroll = () => {
             window.removeEventListener('resize', updateSize);
             ScrollTrigger.getAll().forEach(t => t.kill());
         };
-    }, [images]);
+    }, []);
 
     return (
         <div ref={containerRef} className="hero-container" id="hero">

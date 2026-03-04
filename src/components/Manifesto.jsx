@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import WatchScene from './WatchScene';
 
 const Manifesto = () => {
     return (
@@ -29,19 +30,14 @@ const Manifesto = () => {
                         <a href="#inquiry" className="rolex-link">Discover more</a>
                     </motion.div>
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.9, filter: "blur(10px)", y: 20 }}
-                        whileInView={{ opacity: 1, scale: 1, filter: "blur(0px)", y: 0 }}
+                        initial={{ opacity: 0, filter: "blur(10px)", y: 20 }}
+                        whileInView={{ opacity: 1, filter: "blur(0px)", y: 0 }}
                         transition={{ duration: 1.5, delay: 0.2, ease: "easeOut" }}
                         viewport={{ once: true }}
                         className="rolex-image-wrapper"
+                        style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}
                     >
-                        <motion.img
-                            src="/watch_generated_gemini.png?v=2"
-                            alt="Watch Masterpiece"
-                            className="rolex-content-img"
-                            animate={{ y: [-5, 5, -5], rotateZ: [-0.2, 0.2, -0.2] }}
-                            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-                        />
+                        <WatchScene />
                     </motion.div>
                 </div>
             </div>
