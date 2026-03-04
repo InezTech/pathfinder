@@ -20,7 +20,16 @@ const CinemaScroll = () => {
                 img.fetchPriority = index === 0 ? "high" : "low";
                 const frameIndex = (index + 1).toString().padStart(4, '0');
                 img.src = `/frames/frame_${frameIndex}.jpg`;
-                img.onload = () => {
+                img.onload = async () => {
+                    // EXTREME MOBILE SCROLL FIX: Await img.decode() forces the massive JPEG 
+                    // decompression math onto a background thread BEFORE it touches the Canvas.
+                    // Without this, the browser halts the main thread 60x a second to decompress 
+                    // images instantly, causing brutal scrolling freeze on phones.
+                    try {
+                        await img.decode();
+                    } catch (e) {
+                        // ignore broken aborts
+                    }
                     loadedImages[index] = img;
                     resolve(img);
                 };
@@ -55,12 +64,15 @@ const CinemaScroll = () => {
                 }
 
                 // Now smoothly load all the remaining gap frames in the background.
-                // Mobile uses a very slow trickle (2 parallel) so it never interrupts scrolling.
+                // MOBILE RAM FIX: Do not load all 417 frames on mobile. It violently crashes Safari's 250MB per-tab memory limit. 
+                // We physically only download every 3rd frame on mobile (cutting RAM and network load by 66%).
                 const concurrency = isMobile ? 2 : 6;
-                for (let i = 1; i < frameCount; i += concurrency) {
+                const frameStep = isMobile ? 3 : 1;
+
+                for (let i = 1; i < frameCount; i += concurrency * frameStep) {
                     const batch = [];
-                    for (let j = 0; j < concurrency && i + j < frameCount; j++) {
-                        const targetFrame = i + j;
+                    for (let j = 0; j < concurrency && i + (j * frameStep) < frameCount; j++) {
+                        const targetFrame = i + (j * frameStep);
                         // Skip if we already loaded it in the skeleton pass
                         if (targetFrame % skeletonStep !== 0 && targetFrame !== 0) {
                             batch.push(loadFrame(targetFrame));
@@ -127,14 +139,15 @@ const CinemaScroll = () => {
         // Initial draw setup (we no longer need to bind this to resize events, CSS handles that magically!)
         setTimeout(() => renderFrame(scrollObj.frame), 100);
 
+        const isMobileScreen = window.innerWidth < 768;
         const tl = gsap.timeline({
             scrollTrigger: {
                 trigger: containerRef.current,
                 start: "top top",
                 end: "+=400%",
-                // Reduced scrub from 1.5 to 0.5. 
-                // High scrub values create artificial sluggish drag. 0.5 feels much more razor-sharp and responsive.
-                scrub: 0.5,
+                // MOBILE TOUCH FIX: High GSAP scrub numbers fight native smartphone rubber-band scrolling.
+                // Dropping scrub to 0.1 on phones makes it stick directly to the thumb with zero artificial "lag".
+                scrub: isMobileScreen ? 0.1 : 0.5,
                 pin: true,
             }
         });
